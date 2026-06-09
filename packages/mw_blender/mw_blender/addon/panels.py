@@ -14,7 +14,7 @@ class MW_PT_main(bpy.types.Panel):  # type: ignore[misc]
 
     def draw(self, context: object) -> None:
         layout = self.layout  # type: ignore[attr-defined]
-        props = getattr(context, "scene").motionweaver
+        props = context.scene.motionweaver
         layout.prop(props, "source_mesh_path")
         layout.prop(props, "spec_path")
         layout.separator()

@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+
 from mw_core import MotionSpec, normalize_spec
 from mw_core.geometry.axes import cardinal_to_vector
 from mw_core.geometry.pivots import pivot_candidates_from_contact

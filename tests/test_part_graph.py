@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from mw_core.geometry.part_graph import Part, PartGraph
 
 

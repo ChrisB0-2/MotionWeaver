@@ -68,7 +68,9 @@ def _check_joint_refs(spec: MotionSpec, part_ids: set[str]) -> list[str]:
             issues.append(f"duplicate joint id: {joint.id!r}")
         seen.add(joint.id)
         if joint.parent_part not in part_ids:
-            issues.append(f"joint {joint.id!r} references unknown parent_part {joint.parent_part!r}")
+            issues.append(
+                f"joint {joint.id!r} references unknown parent_part {joint.parent_part!r}"
+            )
         if joint.child_part not in part_ids:
             issues.append(f"joint {joint.id!r} references unknown child_part {joint.child_part!r}")
         if joint.parent_part == joint.child_part:
@@ -86,7 +88,9 @@ def _check_limits(joint: Joint) -> list[str]:
         return issues
     if joint.type in _ANGULAR_JOINTS:
         if lim.min_m is not None or lim.max_m is not None:
-            issues.append(f"joint {joint.id!r} ({joint.type.value}) uses linear limits (min_m/max_m)")
+            issues.append(
+                f"joint {joint.id!r} ({joint.type.value}) uses linear limits (min_m/max_m)"
+            )
         if lim.min_deg is not None and lim.max_deg is not None and lim.min_deg > lim.max_deg:
             issues.append(f"joint {joint.id!r} has min_deg > max_deg")
     if joint.type in _LINEAR_JOINTS:
@@ -178,9 +182,7 @@ def _check_clips(spec: MotionSpec, control_ids: set[str]) -> list[str]:
                     "has out-of-order keyframe times"
                 )
             if clip.duration_s is not None and times and max(times) > clip.duration_s:
-                issues.append(
-                    f"clip {clip.id!r} channel {ci} has a keyframe past duration_s"
-                )
+                issues.append(f"clip {clip.id!r} channel {ci} has a keyframe past duration_s")
     return issues
 
 

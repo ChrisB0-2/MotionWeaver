@@ -6,6 +6,7 @@ import math
 from typing import Any
 
 import pytest
+
 from mw_core import MotionSpec, normalize_spec
 from mw_core.exporters.manifest_export import build_manifest, spec_from_manifest
 from mw_core.motion_spec.normalization import normalize_axis

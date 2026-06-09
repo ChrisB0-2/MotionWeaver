@@ -7,6 +7,7 @@ import copy
 from typing import Any
 
 import pytest
+
 from mw_core import MotionSpec, SemanticError, normalize_spec, validate_spec
 from mw_core.motion_spec import semantic_issues
 

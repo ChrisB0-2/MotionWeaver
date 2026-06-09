@@ -52,7 +52,9 @@ class SpecParser(ABC):
         try:
             spec = MotionSpec.model_validate(raw_json)
         except Exception:  # noqa: BLE001 - surfaced as a structural issue
-            return ParseResult(spec=None, raw_json=raw_json, issues=["proposal failed schema validation"])
+            return ParseResult(
+                spec=None, raw_json=raw_json, issues=["proposal failed schema validation"]
+            )
         return ParseResult(
             spec=spec,
             raw_json=raw_json,

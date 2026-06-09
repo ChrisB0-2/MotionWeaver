@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 import jsonschema
+
 from mw_core import MotionSpec
 
 
