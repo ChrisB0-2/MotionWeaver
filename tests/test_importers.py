@@ -54,6 +54,21 @@ def test_import_scene_glb_preserves_object_names(tmp_path: Path) -> None:
     assert imported.connected_component_count == 2
 
 
+def test_import_glb_with_named_material_extracts_material_name(tmp_path: Path) -> None:
+    # A PBR material name survives the GLB round-trip and lands in
+    # material_names (the true-positive path of _material_names; plain
+    # ColorVisuals files are covered by the tests above yielding []).
+    mesh = trimesh.creation.box()
+    mesh.visual = trimesh.visual.TextureVisuals(
+        material=trimesh.visual.material.PBRMaterial(name="HullPaint")
+    )
+    path = tmp_path / "painted.glb"
+    trimesh.Scene({"Hull": mesh}).export(path)
+
+    imported = import_mesh(path)
+    assert imported.material_names == ["HullPaint"]
+
+
 def test_imported_geometry_feeds_split_connected_components(tmp_path: Path) -> None:
     # End-to-end: file -> ImportedMesh -> split_connected_components -> [Part].
     scene = trimesh.Scene()
