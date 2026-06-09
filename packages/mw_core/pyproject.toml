@@ -15,6 +15,12 @@ dependencies = [
 # lightweight and importable without heavy native deps.
 geometry = [
     "trimesh>=4.0",
+    # trimesh only hard-requires numpy; the features we call need these too:
+    # mesh.split() needs a graph engine (scipy.sparse.csgraph) and
+    # proximity.ProximityQuery needs an rtree spatial index. Both verified
+    # permissive (BSD-3-Clause / MIT).
+    "scipy>=1.10",
+    "rtree>=1.0",
     "open3d>=0.18",
 ]
 
