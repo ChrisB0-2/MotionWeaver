@@ -179,7 +179,7 @@ def _vertices_near_surface(points: Any, target_mesh: Any, tol: float) -> Any:
 
     if len(points) == 0:
         return points
-    query = trimesh.proximity.ProximityQuery(target_mesh)
+    query = trimesh.proximity.ProximityQuery(target_mesh)  # type: ignore[no-untyped-call]
     _, distances, _ = query.on_surface(points)
     return points[distances <= tol]
 

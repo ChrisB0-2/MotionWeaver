@@ -25,6 +25,10 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "pre-commit>=3.8",
+    # geometry extra deps — mirrors mw-core[geometry] minus open3d (large, uncertain Windows wheels)
+    "trimesh>=4.0",
+    "scipy>=1.10",
+    "rtree>=1.0",
 ]
 
 [tool.pytest.ini_options]
@@ -49,5 +53,5 @@ explicit_package_bases = true
 exclude = "packages/mw_blender/"
 
 [[tool.mypy.overrides]]
-module = ["trimesh.*", "open3d.*", "bpy.*", "bmesh.*", "mathutils.*", "numpy", "numpy.*", "scipy.*"]
+module = ["trimesh.*", "bpy.*", "bmesh.*", "mathutils.*", "numpy", "numpy.*", "scipy.*"]
 ignore_missing_imports = true

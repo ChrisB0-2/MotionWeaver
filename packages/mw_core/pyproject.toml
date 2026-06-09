@@ -21,7 +21,6 @@ geometry = [
     # permissive (BSD-3-Clause / MIT).
     "scipy>=1.10",
     "rtree>=1.0",
-    "open3d>=0.18",
 ]
 
 [build-system]
