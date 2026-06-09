@@ -7,62 +7,10 @@ from typing import Any
 
 import pytest
 
+from conftest import make_spec
 from mw_core import MotionSpec, normalize_spec, validate_spec
 from mw_core.rig.baker import bake
 from mw_core.rig.planner import plan
-
-Keyframes = list[tuple[float, float] | tuple[float, float, str]]
-
-
-def make_spec(
-    *,
-    joint_type: str = "hinge",
-    axis: list[float] | None = None,
-    pivot: list[float] | None = None,
-    pivot_space: str = "world",
-    control_property: str = "angle_deg",
-    keyframes: Keyframes | None = None,
-    duration_s: float | None = 1.0,
-    controls: list[dict[str, Any]] | None = None,
-    channels: list[dict[str, Any]] | None = None,
-) -> MotionSpec:
-    """Build a minimal validated two-part spec: base --j1--> arm, control c1, clip clip1."""
-    if keyframes is None:
-        keyframes = [(0.0, 0.0), (1.0, 90.0)]
-    keyframe_dicts = [
-        {"t": kf[0], "value": kf[1], "interp": kf[2] if len(kf) == 3 else "linear"}
-        for kf in keyframes
-    ]
-    if controls is None:
-        controls = [
-            {"id": "c1", "label": "Control 1", "joint_id": "j1", "property": control_property}
-        ]
-    if channels is None:
-        channels = [{"control_id": "c1", "keyframes": keyframe_dicts}]
-    payload = {
-        "schema_version": "0.1.0",
-        "asset_id": "baker_test",
-        "coordinate_system": {"up_axis": "Z", "forward_axis": "Y", "unit_scale_meters": 1.0},
-        "parts": [
-            {"id": "base", "name": "Base", "selector": {"object_names": ["Base"]}},
-            {"id": "arm", "name": "Arm", "selector": {"object_names": ["Arm"]}},
-        ],
-        "joints": [
-            {
-                "id": "j1",
-                "type": joint_type,
-                "parent_part": "base",
-                "child_part": "arm",
-                "pivot": {"space": pivot_space, "position": pivot or [0.0, 0.0, 0.0]},
-                "axis": axis or [0.0, 0.0, 1.0],
-            }
-        ],
-        "controls": controls,
-        "clips": [
-            {"id": "clip1", "name": "Clip 1", "duration_s": duration_s, "channels": channels}
-        ],
-    }
-    return validate_spec(MotionSpec.model_validate(payload))
 
 
 def _only_track_keyframes(spec: MotionSpec, **bake_kwargs: Any) -> list[Any]:
