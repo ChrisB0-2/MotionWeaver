@@ -49,5 +49,5 @@ explicit_package_bases = true
 exclude = "packages/mw_blender/"
 
 [[tool.mypy.overrides]]
-module = ["trimesh.*", "open3d.*", "bpy.*", "bmesh.*", "mathutils.*"]
+module = ["trimesh.*", "open3d.*", "bpy.*", "bmesh.*", "mathutils.*", "numpy", "numpy.*", "scipy.*"]
 ignore_missing_imports = true

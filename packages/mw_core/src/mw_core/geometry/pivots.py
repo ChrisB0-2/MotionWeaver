@@ -179,9 +179,7 @@ def _vertices_near_surface(points: Any, target_mesh: Any, tol: float) -> Any:
 
     if len(points) == 0:
         return points
-    # trimesh ships py.typed but ProximityQuery.__init__ is itself untyped,
-    # which strict mypy rejects inside typed code.
-    query = trimesh.proximity.ProximityQuery(target_mesh)  # type: ignore[no-untyped-call]
+    query = trimesh.proximity.ProximityQuery(target_mesh)
     _, distances, _ = query.on_surface(points)
     return points[distances <= tol]
 
