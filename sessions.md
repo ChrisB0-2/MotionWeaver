@@ -4,6 +4,140 @@ Engineering session log for MotionWeaver. Newest entries first.
 
 ---
 
+## 2026-06-09 — Session 5: baker + GLB exporter — first end-to-end pipeline
+
+### Goal
+Plan what remains to make the project "ready to use", then start executing.
+Defined the usable-product bar as: multipart mesh + motion_spec -> baked GLB +
+sidecar manifest that animates in a standard viewer (no AI, no Blender
+required). Executed the critical path: clip baker, GLB exporter, runnable demo.
+
+### Context
+Session start gap analysis confirmed two stale notes from session 4: CI **was**
+green at `dcbdd8d` (verified via the GitHub API — both workflows), and
+`rig/kinematic_graph.py` was already implemented (working dataclasses +
+traversal), not "empty scaffolding". The real remaining gaps were the back
+half of the pipeline (bake -> export) and the geometry->spec seam. Caution
+flag noted: the "Blender headless" workflow is a placeholder `echo` — its
+green check verifies nothing.
+
+### What Changed
+
+**Commit `3cc1b04` "Implement clip baking into parent-relative TRS tracks":**
+- `rig/baker.py`: `bake(spec, graph, *, sample_rate_hz=30.0)` resolves each
+  clip channel control -> joint -> graph node, samples uniformly (endpoint
+  included), and emits TRS keyframes. Hinge/spin: XYZW quaternion about the
+  normalized axis + pivot-offset translation `p - R*p`; slider: translation
+  along the normalized axis. Tracks are **relative to the parent part node**
+  assuming identity rest transforms, so the scene graph composes chains and
+  no per-chain math is needed.
+- Keyframe `interp` applies to the segment *leaving* the keyframe (Blender
+  convention); values hold flat outside the keyframe range; duration defaults
+  to the last keyframe time when `duration_s` is absent.
+- Honest scope cuts raise specific `NotImplementedError`s: yaw_pitch joints
+  (needs planner stack expansion), cubic interpolation, part_bbox_normalized
+  pivots. Two channels driving one joint in a clip raise `ValueError`.
+- 14 TDD tests in `tests/test_baker.py` (all watched failing first).
+
+**Commit `f1c355f` "Implement GLB export with hand-rolled stdlib writer":**
+- `exporters/gltf_export.py`: complete GLB writer on stdlib `struct`/`json`.
+  Node 0 = asset root (named after `asset_id`); part nodes follow in
+  `spec.parts` order, parented per the kinematic graph. Z-up specs get a
+  -90 deg X root rotation so output is glTF Y-up (baked tracks live below the
+  root, so they need no conversion); `unit_scale_meters != 1` becomes a root
+  scale. Optional `meshes` mapping attaches POSITION+indices primitives.
+  BakedClips become animations with LINEAR samplers; part ids mirror into
+  node `extras` (stable ids only). Signature extended from the stub: it now
+  takes `spec` and `graph` (the stub couldn't know the hierarchy without them).
+- **Deliberate deviation from the stub docstring:** no pygltflib. It is
+  passive dataclasses; buffer packing/accessor bookkeeping is ours either
+  way, and stdlib keeps the deterministic core dependency-free.
+- `tests/conftest.py`: `make_spec` builder promoted from test_baker for reuse
+  (+ `up_axis` / `unit_scale_meters` params).
+- 13 TDD tests including GLB-container parsing, binary accessor decoding,
+  and a `trimesh.load` round-trip as external format validation.
+
+**Commit `6254bfd` "Add antenna demo script: full pipeline to a playable GLB":**
+- `examples/export_antenna_demo.py`: builds placeholder geometry for the five
+  antenna parts (sized to the spec pivots) and runs validate -> normalize ->
+  plan -> bake -> export GLB + manifest. First user-runnable proof of the
+  product thesis; output plays in any standard glTF viewer.
+- `tests/test_examples.py`: loads the example as a module, exports to tmp,
+  checks trimesh round-trip (5 geometries), animation names, manifest->spec.
+
+### Why It Matters
+The deterministic core now closes end-to-end for the first time:
+`motion_spec` -> kinematic graph -> baked TRS tracks -> playable GLB +
+manifest. This was the single biggest gap between "well-tested front half"
+and "usable product". Everything runs with zero cloud AI and zero Blender,
+honoring the report's constraints 3 and 6.
+
+### Verification
+- `uv run pytest` — **72 passed** (44 prior + 14 baker + 13 exporter + 1 demo).
+- `uv run ruff check .` / `ruff format --check .` — clean repo-wide.
+- `uv run mypy packages/mw_core/src packages/mw_ai/src` — Success, 22 files.
+- TDD discipline: every new test watched failing before implementation
+  (RED via stub `NotImplementedError`/`TypeError`; match-patterns confirmed
+  the three "rejected for now" tests fail against the generic stub message).
+- `uv run python examples/export_antenna_demo.py` — wrote a 24.8 KB GLB +
+  6 KB manifest into `examples/out/` (gitignored via `out/`).
+- CI (GitHub API): green for both workflows at `3cc1b04` and `f1c355f`;
+  the `6254bfd` CI run was still in progress at time of writing.
+
+### Decisions Made
+- **"Ready to use" milestone definition:** mesh + spec -> GLB + manifest
+  playable in a browser; AI parser and Blender add-on are later milestones.
+- **Baked-track space:** parent-relative node TRS with identity rest
+  transforms (matches world-space geometry from the importers); hinge bakes
+  as `translation = p - R*p, rotation = R`.
+- **No pygltflib:** hand-rolled GLB writer on stdlib; revisit only if scope
+  grows past rigid parts (textures/materials/skins are out of scope anyway).
+- **Y-up conversion at the root node** (single -90 deg X rotation) rather
+  than rewriting baked data; `up_axis` other than Z/Y is rejected for now.
+- Quaternions are glTF XYZW everywhere in the bake/export path.
+
+### Risks / Limitations
+- yaw_pitch joints, cubic interpolation, and part_bbox_normalized pivots are
+  rejected with `NotImplementedError` — by design, but the antenna-class
+  assets that need yaw_pitch cannot bake until the planner expands stacks.
+  The schema is also underspecified there: a control references a joint, not
+  a stack element, so "which axis does this control drive" needs a spec-level
+  decision before implementation.
+- Exported GLBs validate via trimesh round-trip and JSON-chunk assertions,
+  not via the official Khronos glTF validator; a viewer smoke test
+  (donmccurdy viewer / Blender import) has not been done by a human yet.
+- The baker samples uniformly; exact keyframe corners between samples are
+  smoothed (standard bake lossiness at 30 Hz, but worth knowing).
+- `export_glb` writes uint32 indices and no materials — fine for previews,
+  not optimized output.
+- "Blender headless" CI is still a placeholder `echo` — its green check
+  verifies nothing (pre-existing, now explicitly flagged).
+
+### Next Steps
+1. `mw_runtime_web`: GLTFLoader + AnimationMixer + manifest-driven controls
+   (Milestone B — proves the export in the reference runtime); needs build/CI
+   wiring for the TS package.
+2. Geometry-`Part` -> spec-`Selector` mapping + wire in
+   `pivot_candidates_from_contact` (session 4's planned slice, still open).
+3. Planner yaw_pitch stack expansion (requires the spec-level control->stack
+   addressing decision first — good ADR candidate).
+4. Make the headless-Blender CI workflow actually run something.
+5. Human smoke test: drop `examples/out/antenna_demo.glb` into a glTF viewer
+   and watch `scan_loop`.
+
+### Handoff Notes
+- Session 4 handoff still applies (`uv run pytest` / `uv run mypy <paths>` /
+  `uv run ruff check .`; `uv sync` installs geometry deps).
+- `git push` works via the Bash tool (the `Bash(git push *)` allow rule);
+  the PowerShell-tool path is denied by the permission classifier.
+- PS 5.1 `Out-File -Encoding utf8` writes a BOM that corrupts `git commit -F`
+  message files — use `-Encoding ascii`.
+- Shared spec builder for tests lives in `tests/conftest.py` (`make_spec`).
+- Regenerate the demo artifact any time:
+  `uv run python examples/export_antenna_demo.py`.
+
+---
+
 ## 2026-06-09 — Session 4: dev-env cleanup, mypy fix, all tests green
 
 ### Goal
