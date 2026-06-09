@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.uv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / TypeScript
+node_modules/
+packages/mw_runtime_web/dist/
+*.tsbuildinfo
+
+# Unity
+packages/mw_runtime_unity/Library/
+packages/mw_runtime_unity/Temp/
+packages/mw_runtime_unity/Obj/
+
+# Editor / OS
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.blend1
+out/
+tmp/

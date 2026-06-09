@@ -1,0 +1,29 @@
+name: Blender headless
+
+# Runs the deterministic rig/export pipeline inside headless Blender so that
+# Blender-specific build logic is regression-tested separately from the pure
+# Python core. See packages/mw_blender and docs/development.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  blender-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Baseline LTS plus a smoke test against the current general release.
+        blender: ["4.5", "5.1"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      # TODO: install the matrix Blender version (e.g. via blender-downloader or
+      # a cached tarball) and run headless regression scripts:
+      #   blender --background --python packages/mw_blender/scripts/run_smoke.py
+      - name: Placeholder smoke test
+        run: |
+          echo "TODO: run headless Blender ${{ matrix.blender }} regression suite"

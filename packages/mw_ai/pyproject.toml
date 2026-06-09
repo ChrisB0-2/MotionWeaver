@@ -1,0 +1,26 @@
+[project]
+name = "mw-ai"
+version = "0.1.0"
+description = "MotionWeaver AI parser: human intent -> schema-constrained motion_spec"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "mw-core",
+    "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+# Provider SDKs are optional; the parser interface is provider-agnostic.
+anthropic = ["anthropic>=0.39"]
+openai = ["openai>=1.40"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mw_ai"]
+
+[tool.uv.sources]
+mw-core = { workspace = true }

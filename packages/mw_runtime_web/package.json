@@ -1,0 +1,20 @@
+{
+  "name": "@motionweaver/runtime-web",
+  "version": "0.1.0",
+  "description": "MotionWeaver Three.js runtime adapter (reference runtime)",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/adapter.js",
+  "types": "dist/adapter.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "three": ">=0.160.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.160.0",
+    "typescript": "^5.4.0"
+  }
+}

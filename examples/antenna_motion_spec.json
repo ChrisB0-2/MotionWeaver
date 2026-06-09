@@ -1,0 +1,159 @@
+{
+  "schema_version": "0.1.0",
+  "asset_id": "antenna_demo_a01",
+  "source_mesh": {
+    "file_name": "antenna.glb",
+    "units": "meters",
+    "notes": "Rigid multipart communication antenna with service hatch"
+  },
+  "coordinate_system": {
+    "up_axis": "Z",
+    "forward_axis": "Y",
+    "unit_scale_meters": 1.0
+  },
+  "parts": [
+    {
+      "id": "base",
+      "name": "Base",
+      "selector": { "object_names": ["Base"] },
+      "is_static": true
+    },
+    {
+      "id": "mast",
+      "name": "Mast",
+      "selector": { "object_names": ["Mast"] }
+    },
+    {
+      "id": "dish_yoke",
+      "name": "Dish Yoke",
+      "selector": { "object_names": ["DishYoke"] }
+    },
+    {
+      "id": "dish",
+      "name": "Dish",
+      "selector": { "object_names": ["Dish"] }
+    },
+    {
+      "id": "service_hatch",
+      "name": "Service Hatch",
+      "selector": { "object_names": ["ServiceHatch"] }
+    }
+  ],
+  "joints": [
+    {
+      "id": "mast_yaw",
+      "type": "hinge",
+      "parent_part": "base",
+      "child_part": "mast",
+      "pivot": {
+        "space": "world",
+        "position": [0.0, 0.0, 0.25]
+      },
+      "axis": [0.0, 0.0, 1.0],
+      "limits": { "min_deg": -160.0, "max_deg": 160.0 },
+      "notes": "Main yaw rotation of antenna assembly"
+    },
+    {
+      "id": "dish_pitch",
+      "type": "hinge",
+      "parent_part": "dish_yoke",
+      "child_part": "dish",
+      "pivot": {
+        "space": "world",
+        "position": [0.0, 0.15, 1.35]
+      },
+      "axis": [1.0, 0.0, 0.0],
+      "limits": { "min_deg": -10.0, "max_deg": 75.0 },
+      "notes": "Elevation control"
+    },
+    {
+      "id": "service_hatch_open",
+      "type": "hinge",
+      "parent_part": "base",
+      "child_part": "service_hatch",
+      "pivot": {
+        "space": "world",
+        "position": [-0.22, -0.18, 0.32]
+      },
+      "axis": [0.0, 1.0, 0.0],
+      "limits": { "min_deg": 0.0, "max_deg": 95.0 },
+      "notes": "Rear maintenance hatch"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl_yaw",
+      "label": "Antenna Yaw",
+      "joint_id": "mast_yaw",
+      "property": "angle_deg",
+      "default": 0.0,
+      "ui_min": -160.0,
+      "ui_max": 160.0
+    },
+    {
+      "id": "ctrl_pitch",
+      "label": "Dish Pitch",
+      "joint_id": "dish_pitch",
+      "property": "angle_deg",
+      "default": 25.0,
+      "ui_min": -10.0,
+      "ui_max": 75.0
+    },
+    {
+      "id": "ctrl_hatch",
+      "label": "Service Hatch",
+      "joint_id": "service_hatch_open",
+      "property": "angle_deg",
+      "default": 0.0,
+      "ui_min": 0.0,
+      "ui_max": 95.0
+    }
+  ],
+  "clips": [
+    {
+      "id": "scan_loop",
+      "name": "Scan Loop",
+      "duration_s": 6.0,
+      "loop": true,
+      "channels": [
+        {
+          "control_id": "ctrl_yaw",
+          "keyframes": [
+            { "t": 0.0, "value": -120.0, "interp": "linear" },
+            { "t": 3.0, "value": 120.0, "interp": "linear" },
+            { "t": 6.0, "value": -120.0, "interp": "linear" }
+          ]
+        },
+        {
+          "control_id": "ctrl_pitch",
+          "keyframes": [
+            { "t": 0.0, "value": 18.0, "interp": "linear" },
+            { "t": 3.0, "value": 30.0, "interp": "linear" },
+            { "t": 6.0, "value": 18.0, "interp": "linear" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "maintenance_open",
+      "name": "Maintenance Open",
+      "duration_s": 1.2,
+      "loop": false,
+      "channels": [
+        {
+          "control_id": "ctrl_hatch",
+          "keyframes": [
+            { "t": 0.0, "value": 0.0, "interp": "linear" },
+            { "t": 1.2, "value": 95.0, "interp": "linear" }
+          ]
+        }
+      ]
+    }
+  ],
+  "assumptions": [
+    "All parts are rigid bodies",
+    "No skinning deformation is required",
+    "World Z is up",
+    "Mesh object names are stable and unique"
+  ]
+}

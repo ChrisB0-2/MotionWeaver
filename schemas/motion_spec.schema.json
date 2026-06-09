@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "motion_spec",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "asset_id",
+    "coordinate_system",
+    "parts",
+    "joints",
+    "controls",
+    "clips"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "asset_id": { "type": "string" },
+    "source_mesh": {
+      "type": "object",
+      "properties": {
+        "file_name": { "type": "string" },
+        "units": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "coordinate_system": {
+      "type": "object",
+      "required": ["up_axis", "forward_axis", "unit_scale_meters"],
+      "properties": {
+        "up_axis": { "enum": ["X", "Y", "Z", "-X", "-Y", "-Z"] },
+        "forward_axis": { "enum": ["X", "Y", "Z", "-X", "-Y", "-Z"] },
+        "unit_scale_meters": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "selector"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "selector": {
+            "type": "object",
+            "properties": {
+              "object_names": { "type": "array", "items": { "type": "string" } },
+              "material_names": { "type": "array", "items": { "type": "string" } },
+              "connected_component_ids": { "type": "array", "items": { "type": "integer" } }
+            },
+            "additionalProperties": false
+          },
+          "is_static": { "type": "boolean", "default": false }
+        },
+        "additionalProperties": false
+      }
+    },
+    "joints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "parent_part", "child_part", "pivot", "axis"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "enum": ["hinge", "slider", "spin", "yaw_pitch"] },
+          "parent_part": { "type": "string" },
+          "child_part": { "type": "string" },
+          "pivot": {
+            "type": "object",
+            "required": ["space", "position"],
+            "properties": {
+              "space": { "enum": ["local", "world", "part_bbox_normalized"] },
+              "position": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3
+              }
+            },
+            "additionalProperties": false
+          },
+          "axis": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "min_deg": { "type": "number" },
+              "max_deg": { "type": "number" },
+              "min_m": { "type": "number" },
+              "max_m": { "type": "number" }
+            },
+            "additionalProperties": false
+          },
+          "stack": {
+            "type": "array",
+            "items": { "enum": ["yaw", "pitch"] }
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "joint_id", "property"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "joint_id": { "type": "string" },
+          "property": { "enum": ["angle_deg", "distance_m"] },
+          "default": { "type": "number" },
+          "ui_min": { "type": "number" },
+          "ui_max": { "type": "number" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "channels"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+          "loop": { "type": "boolean", "default": false },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["control_id", "keyframes"],
+              "properties": {
+                "control_id": { "type": "string" },
+                "keyframes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["t", "value"],
+                    "properties": {
+                      "t": { "type": "number", "minimum": 0 },
+                      "value": { "type": "number" },
+                      "interp": { "enum": ["step", "linear", "cubic"], "default": "linear" }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

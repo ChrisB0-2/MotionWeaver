@@ -1,0 +1,53 @@
+[project]
+name = "motionweaver"
+version = "0.1.0"
+description = "AI-assisted motion compiler for rigid, multipart mechanical 3D assets"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# The root project is a thin aggregator. Real code lives in packages/*.
+dependencies = [
+    "mw-core",
+    "mw-ai",
+]
+
+[tool.uv.workspace]
+members = ["packages/mw_core", "packages/mw_ai"]
+
+[tool.uv.sources]
+mw-core = { workspace = true }
+mw-ai = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pre-commit>=3.8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["packages/mw_core/src", "packages/mw_ai/src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["packages/mw_core/src", "packages/mw_ai/src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "packages/mw_core/src:packages/mw_ai/src"
+explicit_package_bases = true
+# Blender's bpy is only available inside Blender; do not type-check it here.
+exclude = "packages/mw_blender/"
+
+[[tool.mypy.overrides]]
+module = ["trimesh.*", "open3d.*", "bpy.*", "bmesh.*", "mathutils.*"]
+ignore_missing_imports = true
