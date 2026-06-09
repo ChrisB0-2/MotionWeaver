@@ -10,6 +10,14 @@ unit-tested without ``trimesh``/``Open3D`` installed.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    # trimesh is an optional ("geometry" extra) dependency; this import exists
+    # only so annotations read clearly. (Runtime code below stays duck-typed
+    # because trimesh's own annotations collapse meshes to a loose Geometry
+    # base type, not because stubs are missing — trimesh ships py.typed.)
+    import trimesh
 
 
 @dataclass
@@ -20,6 +28,11 @@ class Part:
     object_names: list[str] = field(default_factory=list)
     # Index into the source mesh's connected components, if known.
     connected_component_ids: list[int] = field(default_factory=list)
+    # Triangle count of the source geometry (0 if unknown).
+    face_count: int = 0
+    # True when this part needs human confirmation before it can be trusted as a
+    # rigid boundary (e.g. a welded single mesh with no separable components).
+    is_uncertain: bool = False
 
 
 @dataclass
@@ -70,12 +83,73 @@ class PartGraph:
         return components
 
 
-def split_connected_components(mesh: object) -> list[Part]:
+def split_connected_components(
+    mesh: trimesh.Trimesh | trimesh.Scene,
+    *,
+    id_prefix: str = "part",
+    min_faces: int = 1,
+) -> list[Part]:
     """Split a mesh into rigid candidate parts by connected geometry.
 
-    TODO: implement with ``trimesh``'s ``mesh.split(only_watertight=False)`` and
-    Blender loose-part separation. Welded single meshes should return a single
-    part and surface an uncertainty flag for human confirmation rather than
-    guessing boundaries.
+    Uses trimesh connected-component splitting
+    (``mesh.split(only_watertight=False)``) so physically disconnected sub-meshes
+    become separate candidate parts. A ``trimesh.Scene`` is first concatenated
+    into a single mesh (``scene.to_geometry()``, or ``dump`` on older trimesh).
+
+    Each returned :class:`Part` records its source component index in
+    ``connected_component_ids`` and its triangle count in ``face_count``. Parts
+    are ordered by descending triangle count so the largest (typically the body)
+    comes first, and ids are assigned sequentially (``{id_prefix}_000`` ...).
+
+    A *welded* mesh that yields a single component is returned as one part with
+    ``is_uncertain=True``: connected-component analysis cannot recover rigid
+    boundaries inside welded geometry, so a human (or a vision-assist pass) must
+    confirm or manually separate it rather than the tool guessing.
+
+    Args:
+        mesh: a ``trimesh.Trimesh`` or ``trimesh.Scene``.
+        id_prefix: prefix for generated part ids.
+        min_faces: components with fewer triangles are discarded as noise.
+            Set to ``0`` to keep every component.
+
+    Raises:
+        TypeError: if ``mesh`` is not a trimesh ``Trimesh``/``Scene``.
     """
-    raise NotImplementedError("connected-component splitting not implemented yet")
+    components = _split_mesh(mesh)
+
+    # (original_component_index, face_count), filtered then sorted largest-first.
+    indexed = [(idx, int(len(comp.faces))) for idx, comp in enumerate(components)]
+    if min_faces > 0:
+        indexed = [(idx, fc) for idx, fc in indexed if fc >= min_faces]
+    indexed.sort(key=lambda pair: pair[1], reverse=True)
+
+    welded = len(indexed) <= 1
+    return [
+        Part(
+            id=f"{id_prefix}_{seq:03d}",
+            connected_component_ids=[orig_idx],
+            face_count=face_count,
+            is_uncertain=welded,
+        )
+        for seq, (orig_idx, face_count) in enumerate(indexed)
+    ]
+
+
+def _split_mesh(mesh: trimesh.Trimesh | trimesh.Scene) -> list[Any]:
+    """Return the connected-component sub-meshes of ``mesh`` (duck-typed).
+
+    Avoids importing trimesh at runtime: the caller already holds a trimesh
+    object, so we detect a Scene (``geometry`` but no ``split``) and otherwise
+    require a mesh exposing ``split`` and ``faces``. The object is handled as
+    ``Any`` because trimesh's own annotations collapse meshes to a loose
+    ``Geometry`` base type.
+    """
+    obj: Any = mesh
+    if hasattr(obj, "geometry") and not hasattr(obj, "split"):
+        # Scene -> single concatenated mesh before connected-component analysis.
+        # to_geometry() is the current API; dump(concatenate=True) is the
+        # pre-deprecation fallback for older trimesh 4.x.
+        obj = obj.to_geometry() if hasattr(obj, "to_geometry") else obj.dump(concatenate=True)
+    if not (hasattr(obj, "split") and hasattr(obj, "faces")):
+        raise TypeError(f"expected a trimesh Trimesh or Scene, got {type(mesh).__name__}")
+    return list(obj.split(only_watertight=False))
