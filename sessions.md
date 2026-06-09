@@ -4,6 +4,124 @@ Engineering session log for MotionWeaver. Newest entries first.
 
 ---
 
+## 2026-06-09 — Session 3: pivot inference, geometry-extra dependency repair
+
+### Goal
+Enact session 2's next steps: push `main` + confirm CI, implement
+`geometry/pivots.py` `pivot_candidates_from_contact`, and (optional) cover
+`_material_names` with a real-materials fixture. The geometry-`Part` →
+spec-`Selector` mapping was deliberately deferred (design-heavy, own slice).
+
+### Context
+Continuation via session 2's Handoff Notes. **Push did not happen:** the
+Claude Code permission classifier denied `git push origin main` (direct push
+to the default branch not authorized in this mode). All work is committed
+locally; `main` is now 8 commits ahead of origin (incl. this entry).
+
+### What Changed
+
+**Commit `0e00403` "Declare scipy and rtree in the geometry extra":**
+- Discovered while probing: trimesh hard-requires only numpy. The features we
+  call need more — `mesh.split()` needs a graph engine (scipy) and
+  `ProximityQuery` needs `rtree`. Neither was declared, so the trimesh-gated
+  tests would have *failed at call time on CI* (they only pass locally because
+  scipy happened to be installed). This was a latent defect in the unpushed CI.
+- License-reviewed before adding: scipy 1.16.2 BSD-3-Clause, rtree 1.4.1 MIT
+  (PEP 639 expression; bundles MIT libspatialindex). Both pip-installed
+  locally (env side effect, same precedent as trimesh in session 1).
+
+**Commit `e188126` "Implement pivot_candidates_from_contact via contact-region SVD":**
+- `geometry/pivots.py`: collects each part's vertices within tolerance
+  (default 0.5% of combined AABB diagonal; `tolerance=` overrides) of the
+  other part's surface via `trimesh.proximity`, then classifies the contact
+  region by its SVD singular-value spectrum:
+  - elongated region → hinge/slider-style axis along its long direction;
+  - planar region → additional spin/turntable-style axis along the plane
+    normal (weighted down when the region is also elongated);
+  - point-like region → position-only candidate, axis = parent→child guess.
+- All plausible interpretations returned, ranked by confidence clamped to
+  **[0.05, 0.9] — never 1.0** (pivots always need human confirmation).
+  SVD axis signs canonicalized (largest component positive), documented as
+  user-flippable. Joint *type* intentionally not decided here. Scenes are
+  rejected (`TypeError`) — split into parts first. No-contact → `[]`.
+- `tests/test_pivots.py`: 8 trimesh-gated tests (planar/turret, exact-edge
+  hinge, cylinder-rim spin, separated→[], gap vs explicit tolerance,
+  corner point contact, unit-axis/confidence invariants, TypeErrors). Every
+  expected axis/position was empirically probed against trimesh 4.12.2
+  before being encoded in a test.
+- `tests/test_pivot_solver.py`: removed the scaffold placeholder pinning the
+  `NotImplementedError` contract (superseded by the 8 behavior tests).
+
+**Commit `125fc17` "Cover _material_names true-positive path":**
+- Session 2 backlog item: a `PBRMaterial(name=...)` survives the GLB
+  round-trip (probed), so `test_importers.py` now pins that it lands in
+  `ImportedMesh.material_names`.
+
+### Why It Matters
+Pivot/axis placement is the core ambiguity of the whole product. The pipeline
+can now go file → parts → *ranked, explainable pivot candidates* — the input
+the preview UI and AI proposal flow need — while structurally honoring
+"assistive, not magic" (confidence cap, explicit rationale strings, honest
+`[]`). The extra repair fixes a class of CI failure that would have shipped.
+
+### Verification
+- TDD: all 8 pivot tests watched failing (`NotImplementedError`) before
+  implementation, then green.
+- `python -m pytest -q` — **44 passed** (36 prior − 1 obsolete placeholder
+  + 8 pivots + 1 material).
+- `python -m ruff check .` / `ruff format --check .` — clean repo-wide.
+- `python -m mypy packages/mw_core/src packages/mw_ai/src` — Success, 22
+  files (one documented `type: ignore[no-untyped-call]`: trimesh ships
+  py.typed but `ProximityQuery.__init__` is untyped).
+- New tests under `-W error::DeprecationWarning` — passed.
+- Empirical probes (trimesh 4.12.2): `on_surface` distances exact; SVD
+  spectra match predictions for square/edge/rim/coincident cases; SVD can
+  return <3 singular values (padding required); GLB material-name
+  round-trip works; `ProximityQuery` raises ModuleNotFoundError without
+  rtree; trimesh wraps scipy/networkx in lazy ExceptionWrappers.
+- **Not verified:** CI (push blocked); rtree/scipy/open3d wheel install on
+  the CI runner.
+
+### Decisions Made
+- Geometry extra must declare every backend feature we call (scipy, rtree) —
+  "trimesh installed" is not the same env as "trimesh features we use work."
+- Contact detection is **vertex-based** (both directions: child verts near
+  parent surface + parent verts near child); confidence band [0.05, 0.9];
+  default tolerance ratio 0.005 of combined bbox diagonal.
+- `PivotCandidate` dataclass unchanged (no `space` field): positions are in
+  the meshes' shared/world frame; spec-space mapping belongs to the future
+  geometry→spec step.
+
+### Risks / Limitations
+- **Vertex sampling can miss contact entirely** when the touching region is
+  interior to both parts' faces (e.g. two long plates crossing mid-face):
+  no vertex of either mesh is near the other surface → `[]`. Surface
+  *sampling* (seeded) is the known upgrade if real assets hit this.
+- Default tolerance ratio (0.5%) is a heuristic pinned by tests, not derived
+  from data; revisit when real mechanical assets arrive.
+- Confidence numbers are ordinal/heuristic (SVD ratio-based), not calibrated
+  probabilities — fine for ranking + UI, don't compare across asset scales.
+- CI green-ness still inferred from local runs only; nothing pushed yet.
+
+### Next Steps
+1. **User action:** push `main` (8 commits) — agent is not permitted to push
+   the default branch — then confirm all four CI steps pass on the runner.
+2. Geometry-`Part` → spec-`Selector` mapping (the two Part types are still
+   unconnected) — next planned slice.
+3. Wire pivot candidates into the part-graph/planner path (today nothing
+   calls `pivot_candidates_from_contact` in the pipeline).
+4. Consider seeded surface sampling for the interior-contact blind spot.
+
+### Handoff Notes
+- Everything in sessions 1–2 handoffs still applies (no `uv`; `python -m`
+  invocations; PS 5.1 `git commit -F` for multi-line messages).
+- `rtree` and `scipy` are now pip-installed locally and declared in the
+  `geometry` extra; CI will pull them via `uv sync --all-extras`.
+- Direct `git push` to `main` is denied by the local permission mode. Either
+  push manually or add a Bash allow rule for it.
+
+---
+
 ## 2026-06-09 — Session 2: housekeeping, import_mesh, CI lint repair
 
 ### Goal
