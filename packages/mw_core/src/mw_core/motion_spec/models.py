@@ -7,7 +7,7 @@ constraints (types, enums, vector arity, ranges). Cross-reference and geometric
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,7 +25,7 @@ Axis6 = str
 Vec3 = list[float]
 
 
-class JointType(str, Enum):
+class JointType(StrEnum):
     """The fixed, testable joint vocabulary. Do not extend without a schema bump."""
 
     HINGE = "hinge"
@@ -34,18 +34,18 @@ class JointType(str, Enum):
     YAW_PITCH = "yaw_pitch"
 
 
-class PivotSpace(str, Enum):
+class PivotSpace(StrEnum):
     LOCAL = "local"
     WORLD = "world"
     PART_BBOX_NORMALIZED = "part_bbox_normalized"
 
 
-class ControlProperty(str, Enum):
+class ControlProperty(StrEnum):
     ANGLE_DEG = "angle_deg"
     DISTANCE_M = "distance_m"
 
 
-class Interp(str, Enum):
+class Interp(StrEnum):
     STEP = "step"
     LINEAR = "linear"
     CUBIC = "cubic"
